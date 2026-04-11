@@ -1,0 +1,48 @@
+github:
+  repo_owner: "danluu"
+  repo_name: "post-mortems"
+  branch: "master"
+  api_base_url: "https://api.github.com"
+  raw_base_url: "https://raw.githubusercontent.com"
+  # Optional: set via environment variable GITHUB_TOKEN for higher rate limits
+  # Unauthenticated: 60 requests/hour. Authenticated: 5000 requests/hour.
+  token_env_var: "GITHUB_TOKEN"
+
+crawling:
+  request_timeout_seconds: 30
+  max_retries: 3
+  retry_backoff_seconds: 2
+  # Whether to follow external links found in the markdown to fetch source material
+  follow_external_links: false
+  # If follow_external_links is true, limit to these domains to avoid crawling the internet
+  allowed_external_domains:
+    - "github.com"
+    - "aws.amazon.com"
+
+parsing:
+  # The danluu repo is a single README.md — this is the file we target
+  target_file: "README.md"
+  # Minimum number of characters in a parsed description to be considered valid
+  min_description_length: 50
+
+normalisation:
+  # Fields considered required for a record to pass quality threshold
+  required_fields:
+    - "title"
+    - "source_url"
+    - "description"
+  # Simhash similarity threshold for near-duplicate detection (0-1, lower = stricter)
+  dedup_similarity_threshold: 0.9
+
+quality:
+  # Records below this score are stored but flagged as low quality
+  minimum_score_threshold: 0.3
+
+storage:
+  output_directory: "./output/incidents"
+  # Index file tracks all stored records for fast lookup without reading all files
+  index_file: "./output/index.json"
+  # Run state file tracks crawl progress to support resumption
+  run_state_file: "./output/run_state.json"
+  # Whether to overwrite existing records or skip them on re-run
+  overwrite_existing: false

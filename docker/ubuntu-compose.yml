@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  app:
+    image: ubuntu:25.04
+    container_name: dev-environment
+    volumes:
+      - ./..:/workspace
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    command: tail -f /dev/null  # Keeps container running for interactive use

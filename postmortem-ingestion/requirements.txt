@@ -1,0 +1,11 @@
+requests
+PyYAML
+python-slugify
+pydantic
+click
+structlog
+simhash
+tenacity
+python-dateutil
+tqdm
+pytest
