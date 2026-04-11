@@ -58,3 +58,43 @@ storage:
   run_state_file: "./output/run_state.json"
   # Whether to overwrite existing records or skip them on re-run
   overwrite_existing: false
+
+taxonomy:
+  infrastructure:
+    - network: 
+      - latency 
+      - partition
+      - dns_failure
+    - compute:
+      - cpu_saturation
+      - host_failure
+      - noisy_neighbour
+    - storage:
+      - disk_failure
+      - iops_aturation
+      - replication_lag
+  application:
+    - memory: 
+      - leak 
+      - oom
+      - gc_pressure
+    - concurrency:
+      - deadlock
+      - race_condition
+      - thread_starvation
+    - dependency:
+      - cascade fail
+      - timeout
+      - circuit_break
+  operational:
+    - misconfiguration: 
+      - baddeploy
+      - config_drift
+      - secret_rotation
+    - capacity:
+      - quota exhaustion
+      - traffic_surge
+      - storage_full
+    - process:
+      - zombie_process
+      - runaway_job
