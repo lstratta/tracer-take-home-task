@@ -19,7 +19,6 @@ from dotenv import load_dotenv
 from utils.logger import configure_logging, get_logger
 from crawler.github_crawler import GitHubCrawler
 from parser.markdown_parser import parse as parse_markdown
-from parser.link_resolver import resolve as resolve_links
 from normaliser.normaliser import normalise
 from normaliser.deduplicator import deduplicate
 from normaliser.quality_scorer import score
@@ -87,9 +86,6 @@ def run(ctx: click.Context) -> None:
     raw_incidents = parse_markdown(crawl_result.content, config["parsing"])
     records_parsed = len(raw_incidents)
     log.info("Parse stage complete", records_parsed=records_parsed)
-
-    # Stage 2b: optional link resolution
-    raw_incidents = resolve_links(raw_incidents, config)
 
     # Stage 3: normalise
     log.info("Stage: normalise", input_count=records_parsed)
@@ -341,8 +337,15 @@ def stats(ctx: click.Context) -> None:
     default=False,
     help="Re-enrich incidents that have already been enriched.",
 )
+@click.option(
+    "--id", "incident_id",
+    default=None,
+    help="Enrich a single specific incident by its ID. Overrides --count and --all.",
+)
 @click.pass_context
-def enrich_cmd(ctx: click.Context, count: int, enrich_all: bool, force: bool) -> None:
+def enrich_cmd(
+    ctx: click.Context, count: int, enrich_all: bool, force: bool, incident_id: str
+) -> None:
     """Run the LLM enricher on stored incidents that have not yet been enriched.
 
     Reads existing records from the index, fetches each source URL, calls the
@@ -353,6 +356,8 @@ def enrich_cmd(ctx: click.Context, count: int, enrich_all: bool, force: bool) ->
       python main.py enrich --count 20
       python main.py enrich --all
       python main.py enrich --count 5 --force
+      python main.py enrich --id ab3f7c2d
+      python main.py enrich --id ab3f7c2d --force
     """
     config = ctx.obj["config"]
     store = JsonStore(config)
@@ -370,14 +375,17 @@ def enrich_cmd(ctx: click.Context, count: int, enrich_all: bool, force: bool) ->
         click.echo("No records found in index. Run 'python main.py run' first.")
         return
 
-    click.echo(
-        f"\nEnriching incidents "
-        f"({'all eligible' if enrich_all else f'up to {count}'}, "
-        f"{'including already-enriched' if force else 'unenriched only'})...\n"
-    )
+    if incident_id:
+        click.echo(f"\nEnriching incident {incident_id}...\n")
+    else:
+        click.echo(
+            f"\nEnriching incidents "
+            f"({'all eligible' if enrich_all else f'up to {count}'}, "
+            f"{'including already-enriched' if force else 'unenriched only'})...\n"
+        )
 
     # Delegate all record processing to the batch module
-    result = run_batch(config, api_key, store, count, enrich_all, force)
+    result = run_batch(config, api_key, store, count, enrich_all, force, incident_id)
 
     # Print per-record status lines
     for r in result.record_results:

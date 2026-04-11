@@ -9,12 +9,6 @@ crawling:
   request_timeout_seconds: 30
   max_retries: 3
   retry_backoff_seconds: 2
-  # Whether to follow external links found in the markdown to fetch source material
-  follow_external_links: false
-  # If follow_external_links is true, limit to these domains to avoid crawling the internet
-  allowed_external_domains:
-    - "github.com"
-    - "aws.amazon.com"
 
 parsing:
   # The danluu repo is a single README.md — this is the file we target

@@ -77,6 +77,12 @@ python main.py enrich --all
 
 # Re-enrich incidents that have already been enriched
 python main.py enrich --count 5 --force
+
+# Enrich a single specific incident by ID
+python main.py enrich --id ab3f7c2d
+
+# Force re-enrich a specific incident
+python main.py enrich --id ab3f7c2d --force
 ```
 
 Enrichment fetches each incident's source URL, sends the page content to an LLM,

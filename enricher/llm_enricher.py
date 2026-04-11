@@ -80,6 +80,40 @@ class IncidentExtraction(BaseModel):
         description="Date of the incident in YYYY-MM-DD format. Omit if not determinable."
     )
 
+    # Taxonomy classification — values must come from the taxonomy provided in the prompt
+    taxonomy_category: Optional[str] = Field(
+        None,
+        description="Top-level taxonomy category (e.g. infrastructure, application, operational)"
+    )
+    taxonomy_subcategory: Optional[str] = Field(
+        None,
+        description="Second-level taxonomy subcategory (e.g. network, compute, memory)"
+    )
+    taxonomy_type: Optional[str] = Field(
+        None,
+        description="Leaf-level taxonomy type (e.g. latency, oom, deadlock)"
+    )
+
+
+def _format_taxonomy(taxonomy: dict) -> str:
+    """Render the config taxonomy as an indented text block for the LLM prompt.
+
+    The config structure is: {category: [{subcategory: [type, ...]}, ...], ...}
+    Output example:
+      infrastructure:
+        network: latency, partition, dns_failure
+        compute: cpu_saturation, host_failure
+    """
+    lines = []
+    for category, subcategories in taxonomy.items():
+        lines.append(f"  {category}:")
+        for item in subcategories or []:
+            if isinstance(item, dict):
+                for subcategory, types in item.items():
+                    type_list = ", ".join(types) if types else ""
+                    lines.append(f"    {subcategory}: {type_list}")
+    return "\n".join(lines)
+
 
 def build_llm(config: dict, api_key: str) -> ChatAnthropic:
     """Construct the LangChain chat model from config.
@@ -127,6 +161,10 @@ def enrich(
     # Bind structured output schema — LangChain will enforce the response shape
     structured_llm = llm.with_structured_output(IncidentExtraction)
 
+    # Format the taxonomy from config for inclusion in the prompt
+    taxonomy = config.get("taxonomy", {})
+    taxonomy_block = _format_taxonomy(taxonomy) if taxonomy else "  (no taxonomy configured)"
+
     # Include existing metadata so the LLM has context about what we already know
     user_message = f"""\
 Please extract the structured incident details from this post-mortem.
@@ -136,6 +174,9 @@ Existing metadata (from the index page that linked here):
 - Current title: {record.title or "Unknown"}
 - Current description: {record.description or "Unknown"}
 - Source URL: {record.source_url}
+
+Taxonomy — classify this incident using exactly these values:
+{taxonomy_block}
 
 Post-mortem content:
 <content>
@@ -177,6 +218,12 @@ Post-mortem content:
         record.severity_raw = extracted.severity
     if extracted.date:
         record.date = extracted.date
+    if extracted.taxonomy_category:
+        record.taxonomy_category = extracted.taxonomy_category
+    if extracted.taxonomy_subcategory:
+        record.taxonomy_subcategory = extracted.taxonomy_subcategory
+    if extracted.taxonomy_type:
+        record.taxonomy_type = extracted.taxonomy_type
 
     # Mark the record so downstream stages and storage know it was LLM-enriched
     record.llm_enriched = True

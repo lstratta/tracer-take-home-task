@@ -42,6 +42,7 @@ def run_batch(
     count: int,
     enrich_all: bool,
     force: bool,
+    incident_id: str = None,
 ) -> BatchEnrichmentResult:
     """Fetch, enrich, re-score, and save a batch of stored incidents.
 
@@ -56,6 +57,7 @@ def run_batch(
         count: Maximum number of records to process (ignored when enrich_all=True).
         enrich_all: When True, process all eligible records regardless of count.
         force: When True, re-enrich records that already have llm_enriched=True.
+        incident_id: When set, process only this specific record ID.
 
     Returns:
         BatchEnrichmentResult with per-record statuses and aggregate counts.
@@ -67,14 +69,30 @@ def run_batch(
     index = store.load_index()
     all_entries = index.get("records", [])
 
-    # Filter index entries to those that still need enriching
-    candidates = [
-        e for e in all_entries
-        if force or not e.get("llm_enriched", False)
-    ]
-
-    # Slice to the requested batch size unless --all was passed
-    batch = candidates if enrich_all else candidates[:count]
+    if incident_id:
+        # Target a single record by ID — bypass count/all, still respect force
+        entry = next((e for e in all_entries if e["id"] == incident_id), None)
+        if entry is None:
+            result.record_results.append(
+                RecordResult(incident_id, "error", "ID not found in index")
+            )
+            result.errors += 1
+            return result
+        if not force and entry.get("llm_enriched", False):
+            result.record_results.append(
+                RecordResult(incident_id, "skip", "already enriched — use --force to re-enrich")
+            )
+            result.skipped += 1
+            return result
+        batch = [entry]
+    else:
+        # Filter index entries to those that still need enriching
+        candidates = [
+            e for e in all_entries
+            if force or not e.get("llm_enriched", False)
+        ]
+        # Slice to the requested batch size unless --all was passed
+        batch = candidates if enrich_all else candidates[:count]
 
     if not batch:
         return result
