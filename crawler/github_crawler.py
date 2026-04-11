@@ -54,17 +54,21 @@ class GitHubCrawler:
         self._setup_auth()
 
     def _setup_auth(self) -> None:
-        token_env_var = self.github_config.get("token_env_var", "GITHUB_TOKEN")
-        token = os.environ.get(token_env_var)
-        if token:
+        # GITHUB_TOKEN is loaded from .env by main.py before the crawler is created
+        token = os.environ.get("GITHUB_TOKEN")
+        # Catch if GITHUB_TOKEN is equal to placeholder value
+        if token == "your-github-token-here":
+            log.warning(
+                "No GITHUB_TOKEN found in .env. Rate limit is 60 requests/hour. "
+                "To increase to 5000/hour, add your token to .env (see .env.example)."
+            )
+        elif token:
             self._session.headers.update({"Authorization": f"token {token}"})
-            log.info("GitHub token configured", env_var=token_env_var)
+            log.info("GitHub token configured")
         else:
             log.warning(
-                "No GitHub token found. Rate limit is 60 requests/hour. "
-                "To increase to 5000/hour, create a personal access token at "
-                "https://github.com/settings/tokens and set the environment variable.",
-                env_var=token_env_var,
+                "No GITHUB_TOKEN found in .env. Rate limit is 60 requests/hour. "
+                "To increase to 5000/hour, add your token to .env (see .env.example)."
             )
 
     def _is_retryable(self, exc: Exception) -> bool:

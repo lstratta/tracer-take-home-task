@@ -4,9 +4,6 @@ github:
   branch: "master"
   api_base_url: "https://api.github.com"
   raw_base_url: "https://raw.githubusercontent.com"
-  # Optional: set via environment variable GITHUB_TOKEN for higher rate limits
-  # Unauthenticated: 60 requests/hour. Authenticated: 5000 requests/hour.
-  token_env_var: "GITHUB_TOKEN"
 
 crawling:
   request_timeout_seconds: 30
@@ -40,7 +37,7 @@ quality:
 
 enrichment:
   # Set to false to skip the LLM enrichment stage entirely
-  enabled: true
+  enabled: false
   # LangChain model identifier — swap this to change provider/model without code changes
   model: "claude-sonnet-4-6"
   # API key is read from the ANTHROPIC_API_KEY environment variable
