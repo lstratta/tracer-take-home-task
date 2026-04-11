@@ -167,6 +167,59 @@ class JsonStore:
         log.info("Storage complete", saved=saved, skipped=skipped, total=index["total_records"])
         return {"saved": saved, "skipped": skipped}
 
+    def load_record(self, record_id: str) -> Optional[IncidentRecord]:
+        """Load a single full IncidentRecord from its JSON file on disk.
+
+        Used by the enrich command to read existing records before updating them.
+        Returns None if the file doesn't exist or can't be deserialised.
+        """
+        path = self._record_path(record_id)
+        if not os.path.exists(path):
+            log.warning("Record file not found", record_id=record_id, path=path)
+            return None
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return IncidentRecord(**data)
+        except Exception as exc:
+            log.error("Failed to load record", record_id=record_id, error=str(exc))
+            return None
+
+    def update_record(self, record: IncidentRecord, index: Dict[str, Any]) -> None:
+        """Overwrite an existing record on disk and refresh its index entry.
+
+        Used after enrichment — always writes regardless of overwrite_existing,
+        since the caller has explicitly chosen to update a specific record.
+        """
+        path = self._record_path(record.id)
+        # Write the full updated record to disk
+        self._atomic_write_json(path, record.model_dump())
+
+        # Refresh the index entry so quality_score and llm_enriched stay in sync
+        entry = {
+            "id": record.id,
+            "title": record.title,
+            "company": record.company,
+            "section": record.section,
+            "date": record.date,
+            "quality_score": record.quality_score,
+            "low_quality": record.low_quality,
+            "llm_enriched": record.llm_enriched,
+            "potential_duplicate_of": record.potential_duplicate_of,
+            "source_url": record.source_url,
+            "content_hash": record.content_hash,
+            "file_path": os.path.relpath(path, os.path.dirname(self.index_file) or "."),
+        }
+        existing_by_id = {r["id"]: i for i, r in enumerate(index["records"])}
+        if record.id in existing_by_id:
+            index["records"][existing_by_id[record.id]] = entry
+        else:
+            # Shouldn't happen when enriching, but handle it safely
+            index["records"].append(entry)
+
+        index["total_records"] = len(index["records"])
+        index["last_updated"] = datetime.now(tz=timezone.utc).isoformat()
+
     def load_run_state(self) -> Dict[str, Any]:
         """Load the run state file."""
         if not os.path.exists(self.run_state_file):

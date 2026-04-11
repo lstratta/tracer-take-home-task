@@ -63,6 +63,26 @@ python main.py crawl-only
 python main.py stats
 ```
 
+**LLM enrichment** on stored incidents (requires `ANTHROPIC_API_KEY` in `.env`):
+
+```bash
+# Enrich the next 10 unenriched incidents (default)
+python main.py enrich
+
+# Enrich a specific number
+python main.py enrich --count 25
+
+# Enrich every eligible incident
+python main.py enrich --all
+
+# Re-enrich incidents that have already been enriched
+python main.py enrich --count 5 --force
+```
+
+Enrichment fetches each incident's source URL, sends the page content to an LLM,
+and updates the record with a richer summary, root causes, remediation actions,
+severity, and duration. Quality scores are recalculated afterwards.
+
 All commands accept `--config` to point at a non-default config file:
 
 ```bash
@@ -102,6 +122,9 @@ Each file is a fully serialised `IncidentRecord`. All fields are present even if
 | `quality_score` | Float 0–1 (see below) |
 | `low_quality` | `true` if quality_score < configured threshold |
 | `potential_duplicate_of` | ID of a near-duplicate record, if found |
+| `llm_enriched` | `true` once the LLM enricher has processed this record |
+| `llm_summary` | LLM-written summary of the incident (set after enrichment) |
+| `llm_enriched_at` | ISO 8601 timestamp of when enrichment ran |
 
 ### Index (`output/index.json`)
 
