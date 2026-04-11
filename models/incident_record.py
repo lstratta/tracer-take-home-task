@@ -94,6 +94,9 @@ class IncidentRecord(BaseModel):
     # Leaf-level taxonomy type (e.g. latency, oom, deadlock)
     taxonomy_type: Optional[str] = None
 
+    # LLM's explanation for why it chose the above taxonomy classification
+    taxonomy_justification: Optional[str] = None
+
     @model_validator(mode="after")
     def title_or_description_required(self) -> "IncidentRecord":
         """Reject records where both title and description are null or empty."""

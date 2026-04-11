@@ -93,6 +93,10 @@ class IncidentExtraction(BaseModel):
         None,
         description="Leaf-level taxonomy type (e.g. latency, oom, deadlock)"
     )
+    taxonomy_justification: Optional[str] = Field(
+        None,
+        description="1-2 sentence explanation of why this taxonomy classification was chosen"
+    )
 
 
 def _format_taxonomy(taxonomy: dict) -> str:
@@ -224,6 +228,8 @@ Post-mortem content:
         record.taxonomy_subcategory = extracted.taxonomy_subcategory
     if extracted.taxonomy_type:
         record.taxonomy_type = extracted.taxonomy_type
+    if extracted.taxonomy_justification:
+        record.taxonomy_justification = extracted.taxonomy_justification
 
     # Mark the record so downstream stages and storage know it was LLM-enriched
     record.llm_enriched = True
