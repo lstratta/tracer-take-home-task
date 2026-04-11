@@ -8,4 +8,6 @@ simhash
 tenacity
 python-dateutil
 tqdm
+langchain-anthropic
+python-dotenv
 pytest

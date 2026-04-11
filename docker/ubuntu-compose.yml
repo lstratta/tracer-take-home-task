@@ -9,4 +9,5 @@ services:
     working_dir: /workspace
     stdin_open: true
     tty: true
-    command: tail -f /dev/null  # Keeps container running for interactive use
+    command: >
+      sh -c "chmod +x /workspace/docker/startup.sh && /workspace/docker/startup.sh && tail -f /dev/null"

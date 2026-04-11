@@ -76,6 +76,15 @@ class IncidentRecord(BaseModel):
     # ISO 8601 timestamp of when this record was created by the normaliser
     ingested_at: str
 
+    # LLM-written 2-4 sentence summary — more accurate than the heuristic description
+    llm_summary: Optional[str] = None
+
+    # True once the enricher has successfully processed this record
+    llm_enriched: bool = False
+
+    # ISO 8601 timestamp of when LLM enrichment completed
+    llm_enriched_at: Optional[str] = None
+
     @model_validator(mode="after")
     def title_or_description_required(self) -> "IncidentRecord":
         """Reject records where both title and description are null or empty."""

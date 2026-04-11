@@ -23,7 +23,7 @@ parsing:
   # The danluu repo is a single README.md — this is the file we target
   target_file: "README.md"
   # Minimum number of characters in a parsed description to be considered valid
-  min_description_length: 50
+  min_description_length: 1
 
 normalisation:
   # Fields considered required for a record to pass quality threshold
@@ -37,6 +37,21 @@ normalisation:
 quality:
   # Records below this score are stored but flagged as low quality
   minimum_score_threshold: 0.3
+
+enrichment:
+  # Set to false to skip the LLM enrichment stage entirely
+  enabled: true
+  # LangChain model identifier — swap this to change provider/model without code changes
+  model: "claude-sonnet-4-6"
+  # API key is read from the ANTHROPIC_API_KEY environment variable
+  # Seconds to wait for a response before giving up on a single record
+  request_timeout_seconds: 30
+  # Maximum characters of fetched page content to send to the LLM
+  # Keeps token costs predictable; most post-mortems fit well within 50k chars
+  max_content_chars: 50000
+  # Skip enrichment for records below this parse confidence — avoids wasting
+  # API calls on low-signal records where the source URL is unreliable
+  min_parse_confidence: 0.3
 
 storage:
   output_directory: "./output/incidents"

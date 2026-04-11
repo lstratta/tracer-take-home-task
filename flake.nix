@@ -6,6 +6,25 @@
   let
     system = "x86_64-linux";
     pkgs = import nixpkgs { inherit system; };
+
+    # Define simhash as a custom package
+    simhash = pkgs.python3Packages.buildPythonPackage rec {
+      pname = "simhash";
+      version = "2.1.2"; # Check PyPI for the latest version if needed
+      
+      format = "setuptools";
+      
+      src = pkgs.fetchPypi {
+        inherit pname version;
+        # Nix will tell you the correct hash on the first run if this is empty
+        hash = "sha256-UzvIz0Hk5t2D8LGEc2NRa/MyPg+pLmPZ5t9OKB6ILhs="; 
+      };
+
+      # Simhash usually has few dependencies, but add them if the build fails
+      propagatedBuildInputs = with pkgs.python3Packages; [
+        # Add dependencies here if the build complains (e.g., setuptools)
+      ];
+    };
   in
   {
 
@@ -18,6 +37,7 @@
         langchain-anthropic
         langgraph-checkpoint
 
+        pip
         ddgs
         beautifulsoup4
         requests
@@ -34,13 +54,14 @@
         python-dateutil
         tqdm
         pytest
+        simhash
       ] ++ [
         pkgs.starship
         streamlit
       ];
 
       shellHook = ''
-        pip install simhash
+        
         export SHELL=${ pkgs.lib.getExe pkgs.bash }
         eval "$(starship init bash)"
         export STARSHIP_CONFIG=$PWD/starship.toml

@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 
 import click
 import yaml
+from dotenv import load_dotenv
 
 from utils.logger import configure_logging, get_logger
 from crawler.github_crawler import GitHubCrawler
@@ -22,6 +23,8 @@ from parser.link_resolver import resolve as resolve_links
 from normaliser.normaliser import normalise
 from normaliser.deduplicator import deduplicate
 from normaliser.quality_scorer import score
+from enricher.fetcher import fetch_content
+from enricher.llm_enricher import build_llm, enrich
 from storage.json_store import JsonStore
 
 log = get_logger("main")
@@ -42,9 +45,15 @@ def _load_config(path: str) -> dict:
 @click.pass_context
 def cli(ctx: click.Context, config: str) -> None:
     """Pillar 1 Incident Data Ingestion — crawls danluu/post-mortems into structured JSON."""
+    # Load .env before anything else so all components can read env vars normally
+    load_dotenv()
     configure_logging()
     ctx.ensure_object(dict)
     ctx.obj["config"] = _load_config(config)
+
+    # Read the API key here once and store it on the context so every subcommand
+    # can pass it to build_llm() without each one having to read the env itself
+    ctx.obj["anthropic_api_key"] = os.environ.get("ANTHROPIC_API_KEY")
 
 
 @cli.command()
@@ -113,7 +122,72 @@ def run(ctx: click.Context) -> None:
         near_flagged=dedup_result.near_duplicates_flagged,
     )
 
-    # Stage 5: quality score
+    # Stage 5: LLM enrichment
+    # Fetch each new record's source page and use the LLM to extract richer
+    # structured data, replacing the heuristic-extracted fields with better values.
+    # Quality scoring runs after this so the score reflects the enriched content.
+    enrichment_config = config.get("enrichment", {})
+    records_enriched = 0
+    records_enrichment_skipped = 0
+
+    api_key = ctx.obj.get("anthropic_api_key")
+    enrichment_enabled = (
+        enrichment_config.get("enabled", True)
+        and api_key
+        and api_key != "your-api-key-here"
+    )
+
+    if enrichment_config.get("enabled", True) and not enrichment_enabled:
+        # Warn clearly rather than letting the API call fail mid-pipeline
+        click.echo(
+            "WARNING: ANTHROPIC_API_KEY is not set in .env — skipping enrichment stage. "
+            "Copy .env.example to .env and add your key to enable enrichment."
+        )
+        log.warning("Enrichment skipped — ANTHROPIC_API_KEY not configured")
+
+    if enrichment_enabled:
+        # Build the LLM client once — reused across all records in this run
+        llm = build_llm(config, api_key)
+        min_confidence = enrichment_config.get("min_parse_confidence", 0.3)
+        log.info("Stage: enrich", input_count=len(incident_records))
+
+        for record in incident_records:
+            # Skip records with no usable URL or below the confidence threshold
+            if not record.source_url or not record.source_url.startswith("http"):
+                records_enrichment_skipped += 1
+                continue
+            if record.parse_confidence < min_confidence:
+                log.debug(
+                    "Skipping enrichment — low parse confidence",
+                    record_id=record.id,
+                    parse_confidence=record.parse_confidence,
+                )
+                records_enrichment_skipped += 1
+                continue
+
+            # Fetch the full post-mortem page content for the LLM
+            page_content = fetch_content(record.source_url, config)
+            if not page_content:
+                records_enrichment_skipped += 1
+                continue
+
+            try:
+                enrich(record, page_content, llm, config)
+                records_enriched += 1
+            except Exception as exc:
+                msg = f"Enrichment failed for {record.id}: {exc}"
+                log.error("Enrichment error", record_id=record.id, error=str(exc))
+                errors.append(msg)
+
+        log.info(
+            "Enrich stage complete",
+            records_enriched=records_enriched,
+            records_skipped=records_enrichment_skipped,
+        )
+    elif not enrichment_config.get("enabled", True):
+        log.info("Enrichment disabled in config — skipping stage")
+
+    # Stage 6: quality score
     log.info("Stage: quality_score", input_count=len(incident_records))
     for record in incident_records:
         try:
@@ -142,6 +216,8 @@ def run(ctx: click.Context) -> None:
                 "records_skipped_duplicate": (
                     storage_result["skipped"] + dedup_result.exact_duplicates_removed
                 ),
+                "records_enriched": records_enriched,
+                "records_enrichment_skipped": records_enrichment_skipped,
                 "records_failed": len(failed_records),
                 "errors": errors,
             }
@@ -155,6 +231,8 @@ def run(ctx: click.Context) -> None:
     click.echo(f"  Records normalised:   {len(incident_records)}")
     click.echo(f"  Exact dupes removed:  {dedup_result.exact_duplicates_removed}")
     click.echo(f"  Near dupes flagged:   {dedup_result.near_duplicates_flagged}")
+    click.echo(f"  Records enriched:     {records_enriched}")
+    click.echo(f"  Enrichment skipped:   {records_enrichment_skipped}")
     click.echo(f"  Records stored:       {storage_result['saved']}")
     click.echo(f"  Records skipped:      {storage_result['skipped']}")
     click.echo(f"  Errors:               {len(errors)}")

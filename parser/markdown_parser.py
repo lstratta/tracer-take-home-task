@@ -20,7 +20,7 @@ log = get_logger("markdown_parser")
 
 LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 SECTION_PATTERN = re.compile(r"^##\s+(.+)$")
-BULLET_PATTERN = re.compile(r"^\s*[*\-]\s+(.+)$")
+ENTRY_PATTERN = re.compile(r"^\s*(\[.+)$")
 
 # Explicit date patterns tried before full fuzzy parsing
 DATE_PATTERNS = [
@@ -140,10 +140,10 @@ def parse(content: str, config: dict) -> List[RawIncident]:
             log.debug("New section", section=current_section, line=line_number)
             continue
 
-        bullet_match = BULLET_PATTERN.match(line)
-        if bullet_match:
+        entry_match = ENTRY_PATTERN.match(line)
+        if entry_match:
             flush_bullet()
-            current_bullet_lines = [bullet_match.group(1)]
+            current_bullet_lines = [entry_match.group(1)]
             current_bullet_start = line_number
             continue
 

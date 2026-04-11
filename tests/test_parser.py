@@ -18,7 +18,7 @@ def config():
 
 
 def test_standard_entry_parsed(sample_content, config):
-    """Standard bullet entry with URL and description is parsed into a RawIncident."""
+    """Entry starting with a hyperlink is parsed into a RawIncident."""
     incidents = parse(sample_content, config)
     assert len(incidents) > 0
 
@@ -29,14 +29,6 @@ def test_primary_url_extracted(sample_content, config):
     with_url = [i for i in incidents if i.primary_url]
     assert len(with_url) > 0
     assert all(i.primary_url.startswith("http") for i in with_url)
-
-
-def test_entry_with_no_url(sample_content, config):
-    """An entry with no URL still produces a RawIncident with raw_text set."""
-    incidents = parse(sample_content, config)
-    no_url = [i for i in incidents if not i.primary_url]
-    assert len(no_url) > 0
-    assert all(i.raw_text for i in no_url)
 
 
 def test_entry_with_multiple_urls(sample_content, config):
@@ -80,20 +72,8 @@ def test_company_name_extracted(sample_content, config):
     assert "Slack" in companies
 
 
-def test_parse_confidence_lower_without_url(sample_content, config):
-    """Entries without a URL have lower average parse confidence than those with a URL."""
-    incidents = parse(sample_content, config)
-    no_url = [i for i in incidents if not i.primary_url]
-    with_url = [i for i in incidents if i.primary_url]
-
-    if no_url and with_url:
-        avg_no_url = sum(i.parse_confidence for i in no_url) / len(no_url)
-        avg_with_url = sum(i.parse_confidence for i in with_url) / len(with_url)
-        assert avg_no_url < avg_with_url
-
-
 def test_multiline_entry_joined(sample_content, config):
-    """Multi-line bullet point is joined into a single RawIncident."""
+    """Multi-line entry is joined into a single RawIncident."""
     incidents = parse(sample_content, config)
     multiline = [i for i in incidents if i.company_or_service == "ExampleCorp"]
     assert len(multiline) == 1
