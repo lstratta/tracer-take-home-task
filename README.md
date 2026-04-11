@@ -26,6 +26,9 @@ files and an `output/index.json` index. Downstream components read from there.
 
 ```bash
 pip install -r requirements.txt
+
+# using Nix flakes?
+nix develop
 ```
 
 ## GitHub Token
@@ -35,17 +38,16 @@ For normal usage, authenticated access at **5000 requests/hour** is recommended.
 
 1. Create a token at <https://github.com/settings/tokens> (no scopes required for
    public repos)
-2. Set the environment variable:
+2. Set the environment variable (or add them to .env):
 
 ```bash
+export ANTHROPIC_API_KEY=your_api_key
 export GITHUB_TOKEN=ghp_yourtoken
 ```
 
 The application warns at startup if no token is configured.
 
 ## Running the application
-
-**Full pipeline** (crawl → parse → normalise → deduplicate → score → store):
 
 ```bash
 python main.py run
