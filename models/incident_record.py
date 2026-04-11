@@ -85,6 +85,15 @@ class IncidentRecord(BaseModel):
     # ISO 8601 timestamp of when LLM enrichment completed
     llm_enriched_at: Optional[str] = None
 
+    # Top-level taxonomy category (infrastructure / application / operational)
+    taxonomy_category: Optional[str] = None
+
+    # Second-level taxonomy subcategory (e.g. network, compute, memory)
+    taxonomy_subcategory: Optional[str] = None
+
+    # Leaf-level taxonomy type (e.g. latency, oom, deadlock)
+    taxonomy_type: Optional[str] = None
+
     @model_validator(mode="after")
     def title_or_description_required(self) -> "IncidentRecord":
         """Reject records where both title and description are null or empty."""

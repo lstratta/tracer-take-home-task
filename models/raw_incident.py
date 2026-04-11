@@ -42,5 +42,3 @@ class RawIncident:
     # Line number in the source file where this entry started
     line_number: Optional[int] = None
 
-    # Content fetched from the primary URL (only populated when link following is enabled)
-    external_content: Optional[str] = None

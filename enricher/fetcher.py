@@ -1,10 +1,4 @@
-"""Fetches the full text content of a post-mortem URL for LLM enrichment.
-
-Distinct from parser/link_resolver.py, which is the optional link-following step
-during the initial parse pass. This fetcher runs after normalisation, on every
-new record that has a source_url, and is expected to be called for every record
-that will be passed to the LLM enricher.
-"""
+"""Fetches the full text content of a post-mortem URL for LLM enrichment."""
 
 import re
 from typing import Optional
