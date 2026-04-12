@@ -195,7 +195,7 @@ class JsonStore:
         # Write the full updated record to disk
         self._atomic_write_json(path, record.model_dump())
 
-        # Refresh the index entry so quality_score and llm_enriched stay in sync
+        # Refresh the index entry so quality_score, llm_enriched, and taxonomy stay in sync
         entry = {
             "id": record.id,
             "title": record.title,
@@ -208,6 +208,9 @@ class JsonStore:
             "potential_duplicate_of": record.potential_duplicate_of,
             "source_url": record.source_url,
             "content_hash": record.content_hash,
+            "taxonomy_category": record.taxonomy_category,
+            "taxonomy_subcategory": record.taxonomy_subcategory,
+            "taxonomy_type": record.taxonomy_type,
             "file_path": os.path.relpath(path, os.path.dirname(self.index_file) or "."),
         }
         existing_by_id = {r["id"]: i for i, r in enumerate(index["records"])}
