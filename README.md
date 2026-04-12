@@ -53,12 +53,6 @@ The application warns at startup if no token is configured.
 python main.py run
 ```
 
-**Fetch raw content only** (useful for debugging the parser):
-
-```bash
-python main.py crawl-only
-```
-
 **Summary statistics** from the stored index:
 
 ```bash

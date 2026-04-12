@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """CLI entry point — Pillar 1 Incident Data Ingestion Application.
 
-Wires together all pipeline components and exposes four commands:
-  run         Full pipeline: crawl → parse → normalise → deduplicate → score → store
-  crawl-only  Fetch raw content only, useful for debugging
-  stats       Print summary statistics from the stored index
-  enrich      Run the LLM enricher on stored incidents
+Wires together all pipeline components and exposes three commands:
+  run     Full pipeline: crawl → parse → normalise → deduplicate → score → store
+  stats   Print summary statistics from the stored index
+  enrich  Run the LLM enricher on stored incidents
 """
 
 import os
@@ -16,7 +15,6 @@ from dotenv import load_dotenv
 
 from utils.logger import configure_logging, get_logger
 from cli.run import run
-from cli.crawl import crawl_only
 from cli.stats import stats
 from cli.enrich import enrich_cmd
 
@@ -50,7 +48,6 @@ def cli(ctx: click.Context, config: str) -> None:
 
 
 cli.add_command(run)
-cli.add_command(crawl_only)
 cli.add_command(stats)
 cli.add_command(enrich_cmd)
 
