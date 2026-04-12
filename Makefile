@@ -13,6 +13,9 @@ enrich-10:
 test:
 	@pytest tests/
 
+make help:
+	@python main.py --help
+
 ubuntu-start:
 	@podman compose -f docker/ubuntu-compose.yml up -d
 
