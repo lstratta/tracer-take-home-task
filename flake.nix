@@ -57,7 +57,7 @@
         simhash
       ] ++ [
         pkgs.starship
-        streamlit
+        pkgs.asciinema
       ];
 
       shellHook = ''

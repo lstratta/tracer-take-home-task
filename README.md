@@ -2,6 +2,10 @@
 
 Pillar 1 (and the LLM taxonomy part of Part 2) of the Failure Scenario Generation System. This application crawls the [danluu/post-mortems](https://github.com/danluu/post-mortems) GitHub repository, parses and extracts structured incident data from its contents, normalises that data into a canonical schema, deduplicates it, scores it for quality, and persists it as JSON files for downstream consumption by classifier and scenario generation components.
 
+## Demo
+
+<script async id="asciicast-569727" src="https://asciinema.org/a/569727.js"></script>
+
 ## Contents
 
 - [Where this fits](#where-this-fits)
