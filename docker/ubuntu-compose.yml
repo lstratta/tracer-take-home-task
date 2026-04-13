@@ -4,6 +4,7 @@ services:
   app:
     image: ubuntu:25.04
     container_name: dev-environment
+    user: "${UID:-1000}:${GID:-1000}"
     volumes:
       - ./..:/workspace
     working_dir: /workspace
