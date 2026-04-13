@@ -55,40 +55,40 @@ storage:
 
 taxonomy:
   infrastructure:
-    - network: 
-      - latency 
+    network:
+      - latency
       - partition
       - dns_failure
-    - compute:
+    compute:
       - cpu_saturation
       - host_failure
       - noisy_neighbour
-    - storage:
+    storage:
       - disk_failure
-      - iops_aturation
+      - iops_saturation
       - replication_lag
   application:
-    - memory: 
-      - leak 
+    memory:
+      - leak
       - oom
       - gc_pressure
-    - concurrency:
+    concurrency:
       - deadlock
       - race_condition
       - thread_starvation
-    - dependency:
-      - cascade fail
+    dependency:
+      - cascade_fail
       - timeout
       - circuit_break
   operational:
-    - misconfiguration: 
-      - baddeploy
+    misconfiguration:
+      - bad_deploy
       - config_drift
       - secret_rotation
-    - capacity:
-      - quota exhaustion
+    capacity:
+      - quota_exhaustion
       - traffic_surge
       - storage_full
-    - process:
+    process:
       - zombie_process
       - runaway_job

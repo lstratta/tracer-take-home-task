@@ -49,10 +49,10 @@ def make_mock_llm(extraction: IncidentExtraction):
 def test_format_taxonomy_renders_correctly():
     """Category, subcategory, and types are rendered as indented text."""
     taxonomy = {
-        "infrastructure": [
-            {"network": ["latency", "partition"]},
-            {"compute": ["cpu_saturation"]},
-        ]
+        "infrastructure": {
+            "network": ["latency", "partition"],
+            "compute": ["cpu_saturation"],
+        }
     }
 
     result = _format_taxonomy(taxonomy)
@@ -69,10 +69,10 @@ def test_format_taxonomy_empty_dict():
     assert result == ""
 
 
-def test_format_taxonomy_category_with_no_subcategory_dicts():
-    """A category whose subcategory list is empty or contains no dicts doesn't crash."""
+def test_format_taxonomy_category_with_no_subcategories():
+    """A category with an empty subcategory dict doesn't crash."""
     taxonomy = {
-        "operational": [],
+        "operational": {},
     }
 
     result = _format_taxonomy(taxonomy)
@@ -237,9 +237,9 @@ def test_enrich_passes_taxonomy_block_from_config():
 
     config = {
         "taxonomy": {
-            "infrastructure": [
-                {"network": ["latency", "partition"]},
-            ]
+            "infrastructure": {
+                "network": ["latency", "partition"],
+            }
         }
     }
 

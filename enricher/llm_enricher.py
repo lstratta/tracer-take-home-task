@@ -102,7 +102,7 @@ class IncidentExtraction(BaseModel):
 def _format_taxonomy(taxonomy: dict) -> str:
     """Render the config taxonomy as an indented text block for the LLM prompt.
 
-    The config structure is: {category: [{subcategory: [type, ...]}, ...], ...}
+    The config structure is: {category: {subcategory: [type, ...], ...}, ...}
     Output example:
       infrastructure:
         network: latency, partition, dns_failure
@@ -111,11 +111,9 @@ def _format_taxonomy(taxonomy: dict) -> str:
     lines = []
     for category, subcategories in taxonomy.items():
         lines.append(f"  {category}:")
-        for item in subcategories or []:
-            if isinstance(item, dict):
-                for subcategory, types in item.items():
-                    type_list = ", ".join(types) if types else ""
-                    lines.append(f"    {subcategory}: {type_list}")
+        for subcategory, types in (subcategories or {}).items():
+            type_list = ", ".join(types) if types else ""
+            lines.append(f"    {subcategory}: {type_list}")
     return "\n".join(lines)
 
 
