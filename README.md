@@ -220,7 +220,7 @@ utils/
 ## Running tests
 
 ```bash
-pytest tests/
+make tests/
 ```
 
 Tests never make real network requests. The GitHub crawler accepts an injectable
@@ -287,33 +287,33 @@ The 8 s per-record average assumes pages respond within ~2 s. URLs that time out
 
 ## Potential improvements
 
-**Concurrent enrichment** — the enrichment stage processes records one at a time. Running
+- **Concurrent enrichment** — the enrichment stage processes records one at a time. Running
 fetches and LLM calls in parallel would cut enrichment time by an order of magnitude with
 no change to output quality or cost.
 
-**Prompt caching** — the system prompt sent to the LLM is identical across every call.
+- **Prompt caching** — the system prompt sent to the LLM is identical across every call.
 Enabling provider-side caching would significantly reduce token costs for large enrichment
 runs.
 
-**Batch API** — for non-time-sensitive enrichment, Anthropic's asynchronous Batch API
+- **Batch API** — for non-time-sensitive enrichment, Anthropic's asynchronous Batch API
 processes requests at 50% of the standard per-token price, halving the cost of bulk runs.
 
-**Storage backend** — the JSON index is a single file rewritten on every update. Replacing
+- **Storage backend** — the JSON index is a single file rewritten on every update. Replacing
 it with SQLite would handle larger corpora with faster lookups and safer concurrent writes.
 
-**Affected services extraction** — the heuristic that identifies impacted services misses
+- **Affected services extraction** — the heuristic that identifies impacted services misses
 common infrastructure names written in lowercase. A pre-compiled vocabulary of well-known
 service names would meaningfully improve recall.
 
-**Near-duplicate detection at scale** — the current comparison is quadratic: every record
+- **Near-duplicate detection at scale** — the current comparison is quadratic: every record
 is checked against every other. Beyond tens of thousands of records, a band-based indexing
 strategy would keep detection fast without sacrificing accuracy.
 
-**Pipeline checkpointing** — if the process is killed mid-run, it restarts from scratch.
+- **Pipeline checkpointing** — if the process is killed mid-run, it restarts from scratch.
 Saving progress after each stage would allow resumption from the last completed point
 rather than re-processing records already handled.
 
-**Config-driven tuning** — several values that affect output quality (quality score
+- **Config-driven tuning** — several values that affect output quality (quality score
 weights, keyword lists, LLM output token limit) are hardcoded. Exposing them in
 `config.yaml` would allow tuning without touching source code.
 
