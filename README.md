@@ -129,7 +129,7 @@ output/
   run_state.json         # state from the most recent run
 ```
 
-### Individual record (`ab3f7c2d.json`)
+### Individual record (`abc123de.json`)
 
 Each file is a fully serialised `IncidentRecord`. All fields are present even if
 `null`. Example fields:
