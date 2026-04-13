@@ -1,10 +1,33 @@
-# postmortem-ingestion
+# Postmortem Ingestion
 
 Pillar 1 of the Failure Scenario Generation System. This application crawls the
 [danluu/post-mortems](https://github.com/danluu/post-mortems) GitHub repository, parses and extracts structured 
 incident data from its contents, normalises that data into a canonical schema, 
 deduplicates it, scores it for quality, and persists it as JSON files for downstream 
 consumption by classifier and scenario generation components.
+
+## Contents
+
+- [Where this fits](#where-this-fits)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [GitHub Token](#github-token)
+- [Running the application](#running-the-application)
+- [Output](#output)
+  - [Individual record](#individual-record-ab3f7c2djson)
+  - [Index](#index-outputindexjson)
+  - [Run state](#run-state-outputrun_statejson)
+- [Quality score](#quality-score)
+- [Idempotency](#idempotency)
+- [Package structure](#package-structure)
+- [Running tests](#running-tests)
+- [Compute estimates](#compute-estimates)
+  - [run without enrichment](#run-without-enrichment)
+  - [enrich](#enrich-the-expensive-stage)
+  - [Scaling beyond the current source](#scaling-beyond-the-current-source)
+  - [Bottlenecks at scale](#bottlenecks-at-scale)
+- [Potential improvements](#potential-improvements)
+- [Known limitations](#known-limitations)
 
 ## Where this fits
 
@@ -207,9 +230,114 @@ pytest tests/
 Tests never make real network requests. The GitHub crawler accepts an injectable
 HTTP client, and tests use `tests/fixtures/sample_readme.md` as input.
 
+## Compute estimates
+
+All estimates assume the current danluu/post-mortems corpus (~150 parsed incidents) and
+the default `claude-sonnet-4-6` model. LLM API costs use public list pricing
+($3/MTok input, $15/MTok output).
+
+### `run` without enrichment
+
+| Resource | Estimate | Reasoning |
+|---|---|---|
+| Wall time | < 5 s | One GitHub API call + regex parsing of ~250 KB + in-memory dedup/scoring of ~150 records |
+| Peak memory | ~90 MB | Python process baseline (~80 MB) + all 150 records in memory (~3 KB each = ~450 KB) |
+| API cost | $0 | One GitHub API request; unauthenticated rate limit (60 req/hr) is sufficient |
+
+### `enrich` (the expensive stage)
+
+Of ~150 parsed entries, roughly 120 pass the skip filters (valid URL, parse confidence ≥ 0.3,
+page fetchable). Each record requires one HTTP fetch and one LLM call.
+
+| Resource | Estimate | Reasoning |
+|---|---|---|
+| Wall time | ~16 min | 120 records × 8 s average (2 s HTTP fetch + 6 s LLM response) — sequential, no concurrency |
+| Peak memory | ~90 MB | One record enriched at a time; the process baseline dominates |
+| Input tokens | ~280 K | 120 calls × ~2,330 tokens (80 system + 250 metadata/taxonomy + ~2,000 page content) |
+| Output tokens | ~48 K | 120 calls × ~400 tokens of structured JSON |
+| LLM cost | **~$1.50** | Input: $0.84 · Output: $0.72 |
+| Storage | < 1 MB | 120 enriched records × ~4 KB JSON + index + run state |
+
+The 8 s per-record average assumes pages respond within ~2 s. URLs that time out
+(30 s default) will inflate wall time; dead links are skipped after the full timeout.
+
+### Scaling beyond the current source
+
+| Corpus size | Eligible records | Sequential enrich time | Enrich time (10 workers) | LLM cost |
+|---|---|---|---|---|
+| 150 (current) | ~120 | ~16 min | ~2 min | ~$1.50 |
+| 1,500 (10×) | ~1,200 | ~2.5 hr | ~15 min | ~$15 |
+| 15,000 (100×) | ~12,000 | ~27 hr | ~2.5 hr | ~$150 |
+| 150,000 (1,000×) | ~120,000 | ~11 days | ~27 hr | ~$1,500 |
+
+### Bottlenecks at scale
+
+1. **Sequential enrichment** — the biggest lever. The current implementation processes
+   one record at a time. A `ThreadPoolExecutor` with 10 workers would give ~10× speedup
+   at near-zero additional cost; the only constraint is the Anthropic tier rate limit
+   (50 RPM on tier 1 for Sonnet).
+
+2. **JSON index as a single file** — every `update_record` call rewrites the whole file.
+   Fine at the current size (<50 KB) but degrades past ~50K records (~7 MB, frequent
+   rewrites). SQLite or a proper database would remove this ceiling.
+
+3. **All records in memory during `run`** — the normaliser and deduplicator load every
+   record into a Python list before storing. Negligible now, but at 100K+ records
+   (~300 MB) chunked streaming would be needed.
+
+4. **Dead-link timeouts** — at scale, many URLs will be unreachable. Reducing
+   `request_timeout_seconds` from 30 s to 5–10 s, or pre-screening with a HEAD request,
+   recovers substantial wall time across large corpora.
+
+## Potential improvements
+
+**Concurrent enrichment** — the enrichment stage processes records one at a time. Running
+fetches and LLM calls in parallel would cut enrichment time by an order of magnitude with
+no change to output quality or cost.
+
+**Prompt caching** — the system prompt sent to the LLM is identical across every call.
+Enabling provider-side caching would significantly reduce token costs for large enrichment
+runs.
+
+**Batch API** — for non-time-sensitive enrichment, Anthropic's asynchronous Batch API
+processes requests at 50% of the standard per-token price, halving the cost of bulk runs.
+
+**Storage backend** — the JSON index is a single file rewritten on every update. Replacing
+it with SQLite would handle larger corpora with faster lookups and safer concurrent writes.
+
+**Affected services extraction** — the heuristic that identifies impacted services misses
+common infrastructure names written in lowercase. A pre-compiled vocabulary of well-known
+service names would meaningfully improve recall.
+
+**Near-duplicate detection at scale** — the current comparison is quadratic: every record
+is checked against every other. Beyond tens of thousands of records, a band-based indexing
+strategy would keep detection fast without sacrificing accuracy.
+
+**Pipeline checkpointing** — if the process is killed mid-run, it restarts from scratch.
+Saving progress after each stage would allow resumption from the last completed point
+rather than re-processing records already handled.
+
+**Config-driven tuning** — several values that affect output quality (quality score
+weights, keyword lists, LLM output token limit) are hardcoded. Exposing them in
+`config.yaml` would allow tuning without touching source code.
+
 ## Known limitations
 
-- **Information fetching**: If the crawler fails to fetch the source information from the link, it just moves on.
+- **Production Use**: This application is designed as a data ingestion prototype
+  and would require meaningful adaptation before being suitable for a production
+  environment. This includes hardened error handling, secret management, deployment
+  configuration, monitoring, and scalability work as described in the improvements
+  section above.
+
+- **Local file storage**: Records are written as JSON files to the local filesystem.
+  In a production setting this would be replaced with object storage, which provides durability, replication,
+  access control, and the ability to share data across multiple services or deployments
+  without coupling them to a single machine's disk.
+
+- **Information fetching**: If the crawler fails to fetch the source URL for a record,
+  it logs a warning and moves on. No retry is attempted and the failure is not surfaced
+  beyond the run summary.
+
 - **Near-duplicate detection**: SimHash is effective for near-identical text but may
   flag unrelated incidents that happen to use similar technical vocabulary. Near-
   duplicates are flagged but never automatically removed.
