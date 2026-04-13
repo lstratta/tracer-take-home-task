@@ -270,20 +270,20 @@ The 8 s per-record average assumes pages respond within ~2 s. URLs that time out
 
 ### Bottlenecks at scale
 
-1. **Sequential enrichment** — the biggest lever. The current implementation processes
+1. **Sequential enrichment**: The biggest lever. The current implementation processes
    one record at a time. A `ThreadPoolExecutor` with 10 workers would give ~10× speedup
    at near-zero additional cost; the only constraint is the Anthropic tier rate limit
    (50 RPM on tier 1 for Sonnet).
 
-2. **JSON index as a single file** — every `update_record` call rewrites the whole file.
+2. **JSON index as a single file**: Every `update_record` call rewrites the whole file.
    Fine at the current size (<50 KB) but degrades past ~50K records (~7 MB, frequent
    rewrites). SQLite or a proper database would remove this ceiling.
 
-3. **All records in memory during `run`** — the normaliser and deduplicator load every
+3. **All records in memory during `run`**: The normaliser and deduplicator load every
    record into a Python list before storing. Negligible now, but at 100K+ records
    (~300 MB) chunked streaming would be needed.
 
-4. **Dead-link timeouts** — at scale, many URLs will be unreachable. Reducing
+4. **Dead-link timeouts**: At scale, many URLs will be unreachable. Reducing
    `request_timeout_seconds` from 30 s to 5–10 s, or pre-screening with a HEAD request,
    recovers substantial wall time across large corpora.
 
@@ -297,25 +297,25 @@ no change to output quality or cost.
 Enabling provider-side caching would significantly reduce token costs for large enrichment
 runs.
 
-- **Batch API** — for non-time-sensitive enrichment, Anthropic's asynchronous Batch API
+- **Batch API**: For non-time-sensitive enrichment, Anthropic's asynchronous Batch API
 processes requests at 50% of the standard per-token price, halving the cost of bulk runs.
 
-- **Storage backend** — the JSON index is a single file rewritten on every update. Replacing
+- **Storage backend**: The JSON index is a single file rewritten on every update. Replacing
 it with SQLite would handle larger corpora with faster lookups and safer concurrent writes.
 
-- **Affected services extraction** — the heuristic that identifies impacted services misses
+- **Affected services extraction**: The heuristic that identifies impacted services misses
 common infrastructure names written in lowercase. A pre-compiled vocabulary of well-known
 service names would meaningfully improve recall.
 
-- **Near-duplicate detection at scale** — the current comparison is quadratic: every record
+- **Near-duplicate detection at scale**: The current comparison is quadratic: every record
 is checked against every other. Beyond tens of thousands of records, a band-based indexing
 strategy would keep detection fast without sacrificing accuracy.
 
-- **Pipeline checkpointing** — if the process is killed mid-run, it restarts from scratch.
+- **Pipeline checkpointing**: If the process is killed mid-run, it restarts from scratch.
 Saving progress after each stage would allow resumption from the last completed point
 rather than re-processing records already handled.
 
-- **Config-driven tuning** — several values that affect output quality (quality score
+- **Config-driven tuning**: Several values that affect output quality (quality score
 weights, keyword lists, LLM output token limit) are hardcoded. Exposing them in
 `config.yaml` would allow tuning without touching source code.
 
