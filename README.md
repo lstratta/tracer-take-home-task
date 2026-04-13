@@ -41,7 +41,7 @@ For normal usage, authenticated access at **5000 requests/hour** is recommended.
 2. Set the environment variable (or add them to .env):
 
 ```bash
-export ANTHROPIC_API_KEY=your_api_key
+export ANTHROPIC_API_KEY=your_api_key # required to run enrichment
 export GITHUB_TOKEN=ghp_yourtoken
 ```
 
@@ -167,6 +167,37 @@ output with no duplicates introduced. This is guaranteed by:
    the same ID, source URL, or content hash already exists and `overwrite_existing` is
    `false`, it is skipped.
 
+## Package structure
+
+```
+main.py                  # CLI entry point — registers commands and loads config/.env
+cli/
+  run.py                 # `run` command — orchestrates the full pipeline
+  stats.py               # `stats` command — prints index summary statistics
+  enrich.py              # `enrich` command — CLI layer for the batch enricher
+crawler/
+  github_crawler.py      # Fetches the danluu README via the GitHub Contents API
+  rate_limiter.py        # Checks GitHub rate-limit headers and sleeps when needed
+parser/
+  markdown_parser.py     # Parses the README line-by-line into RawIncident objects
+normaliser/
+  normaliser.py          # Converts RawIncident → IncidentRecord (cleaning, hashing)
+  deduplicator.py        # Exact and near-duplicate detection via SHA-256 + SimHash
+  quality_scorer.py      # Scores each record 0–1 across four weighted components
+enricher/
+  fetcher.py             # Fetches and strips HTML from a post-mortem source URL
+  llm_enricher.py        # LangChain + Anthropic LLM extraction into structured fields
+  batch.py               # Batch loop — loads, enriches, re-scores, and saves records
+storage/
+  json_store.py          # Atomic JSON persistence with git-style subdirectory layout
+models/
+  raw_incident.py        # Dataclass for parser output before normalisation
+  incident_record.py     # Pydantic model — the canonical schema written to disk
+utils/
+  logger.py              # Configures structlog with JSON output
+  hashing.py             # SHA-256 and SimHash helpers
+```
+
 ## Running tests
 
 ```bash
@@ -178,16 +209,7 @@ HTTP client, and tests use `tests/fixtures/sample_readme.md` as input.
 
 ## Known limitations
 
-- **Date extraction accuracy**: dates appear in many formats in the source data.
-  The parser uses `dateutil` with fuzzy matching, which handles most formats but
-  occasionally misparses ambiguous strings (e.g. "March" without a year). Dates
-  that cannot be parsed are stored as `null` rather than guessed.
-- **Description extraction from complex entries**: some entries in the danluu README
-  contain nested bullet points, code blocks, or unconventional formatting. The parser
-  handles the common cases but may produce imperfect descriptions for unusual entries.
-- **Affected services extraction**: heuristic-based, using proximity to context words
-  like "service" and "database". Will miss services not near those words and may
-  produce false positives for capitalised words in other contexts.
+- **Information fetching**: If the crawler fails to fetch the source information from the link, it just moves on.
 - **Near-duplicate detection**: SimHash is effective for near-identical text but may
   flag unrelated incidents that happen to use similar technical vocabulary. Near-
   duplicates are flagged but never automatically removed.
