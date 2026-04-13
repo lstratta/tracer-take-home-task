@@ -29,21 +29,11 @@ consumption by classifier and scenario generation components.
 - [Potential improvements](#potential-improvements)
 - [Known limitations](#known-limitations)
 
-## Where this fits
-
-```
-postmortem-ingestion (this app)
-        │
-        └─► output/incidents/*.json  ──►  classifier  ──►  scenario generator
-```
-
-This application is **Pillar 1 only**. It produces structured `IncidentRecord` JSON
-files and an `output/index.json` index. Downstream components read from there.
-
 ## Prerequisites
 
 - Python 3.10 or later
 - pip
+- make
 
 ## Installation
 
@@ -73,18 +63,24 @@ The application warns at startup if no token is configured.
 ## Running the application
 
 ```bash
-python main.py run
+make run
 ```
 
 **Summary statistics** from the stored index:
 
 ```bash
-python main.py stats
+make stats
 ```
 
 **LLM enrichment** on stored incidents (requires `ANTHROPIC_API_KEY` in `.env`):
 
 ```bash
+# Convenience commands
+make enrich # defaults to 10
+make enrich COUNT=15 # can be any number
+make enrich-all
+
+# These are the raw commands
 # Enrich the next 10 unenriched incidents (default)
 python main.py enrich
 
@@ -122,7 +118,7 @@ All output is written to the directory configured in `config.yaml` (default: `./
 output/
   incidents/
     ab/
-      ab3f7c2d.json      # individual incident record
+      abc123de.json      # individual incident record
     cd/
       cd0012ff.json
   index.json             # summary index of all records

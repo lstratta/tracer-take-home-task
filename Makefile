@@ -1,19 +1,26 @@
+.PHONY: run stats enrich-all enrich-10 test install help ubuntu-start ubuntu-exec
+
+COUNT ?= 10  # Default value if not provided
+
 run:
 	@python main.py run
 
 stats:
 	@python main.py stats
 
-enrich-all: 
-	@python main.py enrich
+enrich: 
+	@python main.py enrich --count $(COUNT)
 
-enrich-10:
-	@python main.py enrich --count 10
+enrich-all: 
+	@python main.py enrich --all
 
 test:
 	@pytest tests/
 
-make help:
+install:
+	@pip install -r requirements.txt
+
+help:
 	@python main.py --help
 
 ubuntu-start:
