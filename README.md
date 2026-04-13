@@ -180,11 +180,11 @@ decide what to do with them.
 Running the pipeline multiple times against unchanged source data produces the same
 output with no duplicates introduced. This is guaranteed by:
 
-1. **Change detection** — the crawler compares the source file SHA with the value
+1. **Change detection**: The crawler compares the source file SHA with the value
    stored in `run_state.json`. If they match, the crawl is skipped entirely.
-2. **Stable IDs** — the same incident always gets the same ID (hash of its source URL
+2. **Stable IDs**: The same incident always gets the same ID (hash of its source URL
    or raw text), so filenames never change across runs.
-3. **Skip-on-existing** — the store checks the index before writing; if a record with
+3. **Skip-on-existing**: The store checks the index before writing; if a record with
    the same ID, source URL, or content hash already exists and `overwrite_existing` is
    `false`, it is skipped.
 
