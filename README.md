@@ -39,10 +39,11 @@ Pillar 1 (and the LLM taxonomy part of Part 2) of the Failure Scenario Generatio
 ## Installation
 
 ```bash
+git clone git@github.com:lstratta/tracer-take-home-task.git
 pip install -r requirements.txt
 
 # using Nix flakes?
-nix develop
+nix develop # replaces pip install
 ```
 
 ## GitHub Token
