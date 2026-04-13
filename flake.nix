@@ -58,6 +58,7 @@
       ] ++ [
         pkgs.starship
         pkgs.asciinema
+        pkgs.asciinema-agg
       ];
 
       shellHook = ''

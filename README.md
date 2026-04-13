@@ -4,7 +4,8 @@ Pillar 1 (and the LLM taxonomy part of Part 2) of the Failure Scenario Generatio
 
 ## Demo
 
-<script async id="asciicast-569727" src="https://asciinema.org/a/569727.js"></script>
+![Demo Gif](./demo.gif
+)
 
 ## Contents
 
