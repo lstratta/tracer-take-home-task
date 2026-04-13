@@ -1,10 +1,7 @@
 # Postmortem Ingestion
 
 Pillar 1 of the Failure Scenario Generation System. This application crawls the
-[danluu/post-mortems](https://github.com/danluu/post-mortems) GitHub repository, parses and extracts structured 
-incident data from its contents, normalises that data into a canonical schema, 
-deduplicates it, scores it for quality, and persists it as JSON files for downstream 
-consumption by classifier and scenario generation components.
+[danluu/post-mortems](https://github.com/danluu/post-mortems) GitHub repository, parses and extracts structured incident data from its contents, normalises that data into a canonical schema, deduplicates it, scores it for quality, and persists it as JSON files for downstream consumption by classifier and scenario generation components.
 
 ## Contents
 
